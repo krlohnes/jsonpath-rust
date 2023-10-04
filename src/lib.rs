@@ -165,6 +165,10 @@ pub trait JsonPathQuery {
     fn path(self, query: &str) -> Result<Value, String>;
 }
 
+pub trait BorrowedJsonPathQuery {
+    fn path(&self, query: &str) -> Result<Value, String>;
+}
+
 #[derive(Clone)]
 pub struct JsonPathInst {
     inner: JsonPath,
@@ -354,6 +358,63 @@ impl<'a, Data> JsonPathValue<'a, Data> {
     }
 }
 
+/// The base structure stitching the json instance and jsonpath instance with borrowed values
+pub struct BorrowedJsonPathFinder<'a> {
+    json: &'a Value,
+    path: &'a JsonPathInst,
+}
+
+impl BorrowedJsonPathQuery for &Value {
+    fn path(&self, query: &str) -> Result<Value, String> {
+        let p = JsonPathInst::from_str(query)?;
+        Ok(BorrowedJsonPathFinder::new(self, &p).find())
+    }
+}
+
+impl<'a> BorrowedJsonPathFinder<'a> {
+    pub fn new(json: &'a Value, path: &'a JsonPathInst) -> Self {
+        BorrowedJsonPathFinder { json, path }
+    }
+
+    pub fn find(&self) -> Value {
+        let slice = self.find_slice();
+        if !slice.is_empty() {
+            if JsonPathValue::only_no_value(&slice) {
+                Value::Null
+            } else {
+                Value::Array(
+                    self.find_slice()
+                        .into_iter()
+                        .filter(|v| v.has_value())
+                        .map(|v| v.to_data())
+                        .collect(),
+                )
+            }
+        } else {
+            Value::Array(vec![])
+        }
+    }
+
+    /// creates an instance to find a json slice from the json
+    pub fn instance(&self) -> PathInstance {
+        json_path_instance(&self.path.inner, self.json)
+    }
+
+    /// finds a slice of data in the set json.
+    /// The result is a vector of references to the incoming structure.
+    pub fn find_slice(&self) -> Vec<JsonPathValue<'_, Value>> {
+        let res = self.instance().find(self.json.into());
+        let has_v: Vec<JsonPathValue<'_, Value>> =
+            res.into_iter().filter(|v| v.has_value()).collect();
+
+        if has_v.is_empty() {
+            vec![NoValue]
+        } else {
+            has_v
+        }
+    }
+}
+
 /// The base structure stitching the json instance and jsonpath instance
 pub struct JsonPathFinder {
     json: Box<Value>,
@@ -396,6 +457,7 @@ impl JsonPathFinder {
     pub fn instance(&self) -> PathInstance {
         json_path_instance(&self.path.inner, &self.json)
     }
+
     /// finds a slice of data in the set json.
     /// The result is a vector of references to the incoming structure.
     pub fn find_slice(&self) -> Vec<JsonPathValue<'_, Value>> {
