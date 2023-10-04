@@ -219,14 +219,14 @@ impl<'a> Deref for JsonPtr<'a, Value> {
 impl JsonPathQuery for Box<Value> {
     fn path(self, query: &str) -> Result<Value, String> {
         let p = JsonPathInst::from_str(query)?;
-        Ok(JsonPathFinder::new(self, Box::new(p)).find())
+        Ok(JsonPathFinder::new(&self, &p).find())
     }
 }
 
 impl JsonPathQuery for Value {
     fn path(self, query: &str) -> Result<Value, String> {
         let p = JsonPathInst::from_str(query)?;
-        Ok(JsonPathFinder::new(Box::new(self), Box::new(p)).find())
+        Ok(JsonPathFinder::new(&self, &p).find())
     }
 }
 
@@ -355,41 +355,42 @@ impl<'a, Data> JsonPathValue<'a, Data> {
 }
 
 /// The base structure stitching the json instance and jsonpath instance
-pub struct JsonPathFinder {
-    json: Box<Value>,
-    path: Box<JsonPathInst>,
+pub struct JsonPathFinder<'a> {
+    json: &'a Value,
+    path: &'a JsonPathInst,
 }
 
-impl JsonPathFinder {
+impl<'a> JsonPathFinder<'a> {
     /// creates a new instance of [JsonPathFinder]
-    pub fn new(json: Box<Value>, path: Box<JsonPathInst>) -> Self {
+    pub fn new(json: &'a Value, path: &'a JsonPathInst) -> Self {
         JsonPathFinder { json, path }
     }
 
     /// updates a path with a new one
-    pub fn set_path(&mut self, path: Box<JsonPathInst>) {
+    pub fn set_path(&mut self, path: &'a JsonPathInst) {
         self.path = path
     }
     /// updates a json with a new one
-    pub fn set_json(&mut self, json: Box<Value>) {
+    pub fn set_json(&mut self, json: &'a Value) {
         self.json = json
     }
     /// updates a json from string and therefore can be some parsing errors
     pub fn set_json_str(&mut self, json: &str) -> Result<(), String> {
-        self.json = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        //self.json = serde_json::from_str(json).map_err(|e| e.to_string())?;
         Ok(())
     }
     /// updates a path from string and therefore can be some parsing errors
     pub fn set_path_str(&mut self, path: &str) -> Result<(), String> {
-        self.path = Box::new(JsonPathInst::from_str(path)?);
+        //self.path = Box::new(JsonPathInst::from_str(path)?);
         Ok(())
     }
 
     /// create a new instance from string and therefore can be some parsing errors
     pub fn from_str(json: &str, path: &str) -> Result<Self, String> {
-        let json = serde_json::from_str(json).map_err(|e| e.to_string())?;
-        let path = Box::new(JsonPathInst::from_str(path)?);
-        Ok(JsonPathFinder::new(json, path))
+        //let json = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        //let path = Box::new(JsonPathInst::from_str(path)?);
+        //Ok(JsonPathFinder::new(json, path))
+        unimplemented!()
     }
 
     /// creates an instance to find a json slice from the json
