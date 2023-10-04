@@ -162,7 +162,7 @@ extern crate pest;
 /// #Note:
 /// the result is going to be cloned and therefore it can be significant for the huge queries
 pub trait JsonPathQuery {
-    fn path(self, query: &str) -> Result<Value, String>;
+    fn path(&self, query: &str) -> Result<Value, String>;
 }
 
 #[derive(Clone)]
@@ -217,14 +217,21 @@ impl<'a> Deref for JsonPtr<'a, Value> {
 }
 
 impl JsonPathQuery for Box<Value> {
-    fn path(self, query: &str) -> Result<Value, String> {
+    fn path(&self, query: &str) -> Result<Value, String> {
         let p = JsonPathInst::from_str(query)?;
         Ok(JsonPathFinder::new(&self, &p).find())
     }
 }
 
 impl JsonPathQuery for Value {
-    fn path(self, query: &str) -> Result<Value, String> {
+    fn path(&self, query: &str) -> Result<Value, String> {
+        let p = JsonPathInst::from_str(query)?;
+        Ok(JsonPathFinder::new(&self, &p).find())
+    }
+}
+
+impl JsonPathQuery for &Value {
+    fn path(&self, query: &str) -> Result<Value, String> {
         let p = JsonPathInst::from_str(query)?;
         Ok(JsonPathFinder::new(&self, &p).find())
     }
